@@ -68,7 +68,6 @@ TypeScript
 
 ## Project Structure
 
-/
 ├── backend/
 │   ├── main.py             # FastAPI application entry point
 │   ├── pyproject.toml      # Poetry configuration
