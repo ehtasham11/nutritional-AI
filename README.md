@@ -59,7 +59,7 @@ cd nutritional-AI
 ## Running the Backend
 poetry run python -m uvicorn main:app --port 8001 --reload
 
-### Frontend (Next.js with TypeScript and Tailwind CSS)
+## Frontend (Next.js with TypeScript and Tailwind CSS)
 **Requirements**
 Node.js (v14 or higher)
 npm
