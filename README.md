@@ -66,6 +66,26 @@ npm
 Tailwind CSS
 TypeScript
 
+## Project Structure
+
+/
+├── backend/
+│   ├── main.py             # FastAPI application entry point
+│   ├── pyproject.toml      # Poetry configuration
+│   ├── .env               # Environment variables
+├── frontend/
+│   ├── app/              
+│       ├── globals.css/      
+│       ├── layout.tsx/      
+│       ├── page.tsx/       # Next.js pages     
+setup and custom styles
+│   ├── public/             # Public assets
+│   ├── tsconfig.json       # TypeScript configuration
+│   ├── package.json        # Frontend dependencies and scripts
+├── .gitignore              # Git ignore file
+└── README.md               # Project documentation
+
+
 ## Environment Variables
 
 - GOOGLE_API_KEY: API key for Google Generative AI
