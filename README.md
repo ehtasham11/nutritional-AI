@@ -15,7 +15,6 @@ This project includes a backend and frontend for a calorie and diet plan assista
    - [Running the Backend](#running-the-backend)
 2. [Frontend (Next.js with TypeScript and Tailwind CSS)](#frontend-nextjs-with-typescript-and-tailwind-css)
    - [Requirements](#requirements-1)
-   - [Setup](#setup-1)
    - [Running the Frontend](#running-the-frontend)
 3. [Project Structure](#project-structure)
 4. [Environment Variables](#environment-variables)
@@ -47,19 +46,22 @@ This project includes a backend and frontend for a calorie and diet plan assista
 ## Setup
 
 1. **Clone the repository:**
-git clone <repo-url>
-cd <repo-name>/backend
+git clone https://github.com/ehtasham11/nutritional-AI.git
+cd nutritional-AI
 
 2. **Create a .env file in the backend directory and add the following environment variables:**
-GOOGLE_API_KEY=your_google_api_key
-TAVILY_API_KEY=your_tavily_api_key
+- GOOGLE_API_KEY=your_google_api_key
+- TAVILY_API_KEY=your_tavily_api_key
 
 3. The backend uses the Google Generative AI API, Tavily API for search, and FAISS for vector-based searches.
 
 
+## Running the Backend
+poetry run python -m uvicorn main:app --port 8001 --reload
+
 ### Frontend (Next.js with TypeScript and Tailwind CSS)
 **Requirements**
-Node.js (v15 or higher)
+Node.js (v14 or higher)
 npm
 Tailwind CSS
 TypeScript
@@ -68,8 +70,12 @@ TypeScript
 
 - GOOGLE_API_KEY: API key for Google Generative AI
 - TAVILY_API_KEY: API key for Tavily search
-- API_URL: Base URL for the backend API (default: http://localhost:8000)
+- API_URL: Base URL for the backend API (default: http://localhost:8001)
 - Make sure to configure the .env file for the backend and frontend accordingly.
+
+## Running the Frontend
+**To run the frontend:**
+npm run dev
 
 ## License
 
