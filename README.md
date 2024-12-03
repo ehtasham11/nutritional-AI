@@ -81,11 +81,3 @@ npm run dev
 
 **This project is licensed under the MIT License - see the LICENSE file for details.**
 
-
-### Steps to Convert This into `.md`:
-
-1. Create a new file named `README.md` in the root directory of your project.
-2. Copy and paste the markdown content above into this file.
-3. Save the file.
-
-Now, your `README.md` file should be ready! Let me know if you need further adjustments.
