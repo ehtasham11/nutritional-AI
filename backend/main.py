@@ -467,6 +467,10 @@ async def generate_answer(user_input: UserInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/system-status")
+def check_sys_status():
+    return {"response": "System is online"}
 # Run the application
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)

@@ -4,16 +4,35 @@
 
 /* Add this to your global styles (globals.css) */
 .loader {
-    border-top-color: #3498db;
-    animation: spinner 1.5s linear infinite;
+  border-top-color: #3498db;
+  animation: spinner 1.5s linear infinite;
 }
 
 @keyframes spinner {
-    0% {
-        transform: rotate(0deg);
-    }
+  0% {
+    transform: rotate(0deg);
+  }
 
-    100% {
-        transform: rotate(360deg);
-    }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+/* Track */
+::-webkit-scrollbar-track {
+  /* background: #f9fafb; */
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 10px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }

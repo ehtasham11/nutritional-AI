@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from "react";
+import Typewriter from "typewriter-effect";
 
 // Define the Message type
 interface Message {
@@ -12,6 +13,8 @@ const ChatPage = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,8 +53,9 @@ const ChatPage = () => {
           { type: "bot", text: "No response generated." },
         ]);
       }
-    } catch (error) {
+    } catch (err) {
       // Handle errors
+      console.log("error", err);
       setMessages((prevMessages) => [
         ...prevMessages,
         { type: "bot", text: "Error: Unable to fetch response." },
@@ -62,74 +66,114 @@ const ChatPage = () => {
     setLoading(false); // Stop loading
   };
 
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    // Check if the user scrolled manually
+    const isAtBottom = scrollHeight - scrollTop <= clientHeight + 10;
+    setIsAutoScrolling(isAtBottom);
+  };
+  useEffect(() => {
+    if (!isAutoScrolling || !containerRef.current) return;
+
+    // Scroll to the bottom when a new message is added and auto-scroll is active
+    containerRef.current.scrollTo({
+      top: containerRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, isAutoScrolling]);
+
   return (
     <div
       className="flex flex-col items-center justify-center min-h-screen bg-cover bg-center py-8"
-      style={{ backgroundImage: 'url(/newBg.jpg)' }}
+      style={{ backgroundImage: "url(/newBg.jpg)" }}
     >
-      <div className="text-center">
-        <section className="mb-6 max-w-3xl">
-          <h1 className="text-6xl font-bold text-white">Nutrition AI</h1>
-          <h6 className="text-lg text-white">Your personal nutritionist</h6>
+      <div className="m-4 w-full">
+        <section className="mb-6  text-center">
+          <h1 className="text-3xl font-bold text-white">Nutritionist</h1>
+          <h6 className="text-sm text-white">
+            Your AI Powered nutrition planner assistant
+          </h6>
         </section>
 
-        <section className="w-full max-w-3xl mb-6">
-          <div className="bg-white bg-opacity-20 backdrop-blur-md border border-gray-300 rounded-lg p-6 h-96 overflow-y-auto flex flex-col">
+        <section className="mb-4 w-auto mx-4 sm:w-4/6 md:w-3/6 sm:m-auto">
+          <div
+            className="bg-white bg-opacity-20 backdrop-blur-md border border-gray-300 rounded-md p-3 h-96 overflow-y-auto flex flex-col"
+            ref={containerRef}
+            onScroll={handleScroll}
+          >
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`my-2 p-2 rounded-lg ${msg.type === 'user'
-                  ? 'bg-red-600 bg-opacity-80 backdrop-blur-md text-white self-end'
-                  : 'bg-gray-200 text-black self-start'
-                  }`}
+                className={`my-2 p-2 rounded-lg ${
+                  msg.type === "user"
+                    ? "bg-red-600 bg-opacity-80 backdrop-blur-md text-white self-end"
+                    : "bg-gray-200 text-black self-start"
+                }`}
               >
-                {msg.text}
+                {msg.type === "user" ? (
+                  msg.text
+                ) : index === messages.length - 1 ? (
+                  <Typewriter
+                    options={{
+                      strings: [msg.text],
+                      autoStart: true,
+                      cursor: "",
+                      delay: 0,
+                      loop: false,
+                      deleteSpeed: Infinity,
+                    }}
+                  />
+                ) : (
+                  msg.text
+                )}
               </div>
             ))}
           </div>
-        </section>
-
-        <section className="flex flex-col w-full max-w-3xl">
-          <form onSubmit={handleSubmit} className="flex flex-col">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="p-2 border border-gray-300 rounded-lg mb-2"
-              placeholder="What is your goal?"
-              required
-            />
-            <button
-              type="submit"
-              className={`p-2 rounded-lg flex items-center justify-center ${loading ? 'bg-gray-500' : 'bg-red-600 hover:bg-red-700'} text-white`}
-              disabled={loading}
-            >
-              {loading ? (
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 0016 0H4z"
-                  />
-                </svg>
-              ) : (
-                "Create Nutrition Plan"
-              )}
-            </button>
-          </form>
+          <section className="flex flex-col w-full mt-2">
+            <form onSubmit={handleSubmit} className="flex flex-col">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="p-2 border border-gray-300 rounded-lg mb-2"
+                placeholder="What is your goal?"
+                required
+              />
+              <button
+                type="submit"
+                className={`p-2 rounded-lg flex cursor-pointer items-center justify-center ${
+                  loading ? "bg-gray-500" : "bg-red-600 hover:bg-red-700"
+                } text-white`}
+                disabled={loading}
+              >
+                {loading ? (
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 0016 0H4z"
+                    />
+                  </svg>
+                ) : (
+                  "Submit"
+                )}
+              </button>
+            </form>
+          </section>
         </section>
       </div>
     </div>
@@ -138,36 +182,6 @@ const ChatPage = () => {
 
 export default ChatPage;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // 'use client'
 
 // import React, { useState } from 'react'
@@ -175,13 +189,10 @@ export default ChatPage;
 // import img from "./../public/robot.jpg"
 // import img1 from "./../public/human.jpg"
 
-
 // type ChatMessageType = {
 //   role: string;
 //   content: string;
 // }
-
-
 
 // // export async function POST(req: Request): Promise<NextResponse> {
 // //   try {
@@ -200,13 +211,10 @@ export default ChatPage;
 // //   }
 // // }
 
-
 // export default function page() {
 //   const [userInput, setUserInput] = useState<string>('')
 //   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([])
 //   const [isLoading, setIsLoading] = useState<boolean>(false)
-
-
 
 //   const handleUserInput = async () => {
 //     if (!userInput) return;
