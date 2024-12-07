@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Typewriter from "typewriter-effect";
 
 // Define the Message type
@@ -13,8 +13,6 @@ const ChatPage = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -66,23 +64,6 @@ const ChatPage = () => {
     setLoading(false); // Stop loading
   };
 
-  const handleScroll = () => {
-    if (!containerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    // Check if the user scrolled manually
-    const isAtBottom = scrollHeight - scrollTop <= clientHeight + 10;
-    setIsAutoScrolling(isAtBottom);
-  };
-  useEffect(() => {
-    if (!isAutoScrolling || !containerRef.current) return;
-
-    // Scroll to the bottom when a new message is added and auto-scroll is active
-    containerRef.current.scrollTo({
-      top: containerRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages, isAutoScrolling]);
-
   return (
     <div
       className="flex flex-col items-center justify-center min-h-screen bg-cover bg-center py-8"
@@ -97,11 +78,7 @@ const ChatPage = () => {
         </section>
 
         <section className="mb-4 w-auto mx-4 sm:w-4/6 md:w-3/6 sm:m-auto">
-          <div
-            className="bg-white bg-opacity-20 backdrop-blur-md border border-gray-300 rounded-md p-3 h-96 overflow-y-auto flex flex-col"
-            ref={containerRef}
-            onScroll={handleScroll}
-          >
+          <div className="bg-white bg-opacity-20 backdrop-blur-md border border-gray-300 rounded-md p-3 h-96 overflow-y-auto flex flex-col">
             {messages.map((msg, index) => (
               <div
                 key={index}
