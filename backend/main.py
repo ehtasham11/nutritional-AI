@@ -4,6 +4,9 @@ from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.tools.retriever import create_retriever_tool
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.indexes import VectorstoreIndexCreator
+from langchain_community.document_loaders import TextLoader
 from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, START
 from langgraph.graph import MessagesState
@@ -38,6 +41,45 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GOOGLE_API_KEY")
 )
 
+# Setup the RAG model and FAISS VectorStore
+embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
+
+try:
+    loader = TextLoader("nutritionists.txt")
+    index_creator = VectorstoreIndexCreator(
+        embedding=embedding, 
+        vectorstore_cls=FAISS,
+        text_splitter=text_splitter
+    )
+    index = index_creator.from_loaders([loader])
+except Exception as e:
+    print("Error while loading or indexing the document:", e)
+    index = None  # Set to None if there's an issue
+
+# Define the RAG query tool for nutritionist data
+def rag_query_tool(user_input: str) -> str:
+    """
+    Query the RAG model to retrieve nutritionist information.
+
+    Args:
+        user_input: The query string from the user.
+
+    Returns:
+        A string response with nutritionist details or an error message.
+    """
+    if not index:
+        return "Nutritionist data index is not available."
+    try:
+        response = index.query(user_input, llm=llm)
+
+        if response:
+            # Assuming response is structured, return it formatted.
+            return response
+        else:
+            return "No relevant nutritionist information found for your query."
+    except Exception as e:
+        return f"Error while querying nutritionist data: {e}"
 
 
 # Define the database model for appointments
@@ -278,56 +320,50 @@ def calorie_calculator_tool(gender: str, weight: float, height: float, age: int,
     return calculate_daily_calories(gender, weight, height, age, activity_level)
 
 
-tools = [search, retriever_tool, calorie_calculator_tool, book_appointment]
+tools = [search, retriever_tool, calorie_calculator_tool, book_appointment, rag_query_tool]
 
 
 llm_with_tools = llm.bind_tools(tools)
 
 # System message
-sys_msg = SystemMessage(content='''You are a helpful customer support assistant for human calorie calculation.
-            You need to gather the following information from the user:
-            - Person's age, weight, height, gender /pronouns (e.g., she, he, or similar), and activity level (e.g., sedentary, moderate, active, very active).
-            
-            Based on their gender/pronouns, infer if the user is male or female. Do this implicitly and avoid explicitly asking about gender. 
-            Similarly, if they provide information about their daily routine or habits, interpret their activity level. 
-            
-            If you are unable to discern any of this information, politely ask them to clarify! 
-            Never make random guesses if the details remain unclear.
+sys_msg = SystemMessage(content='''You are a helpful customer support assistant specializing in calorie calculation, personalized diet plans, and health-related services. 
+Your key responsibilities include calculating users' daily calorie intake, providing tailored diet plans, and assisting with appointment bookings for nutritionists.
 
-            Once all the necessary information is gathered, call the relevant tool to perform the calorie calculation.
+### **Calorie Calculation Assistant**:
+- Gather the following information from the user for calorie calculation:
+  - Age, weight, height, pronouns (e.g., she/he/they), and activity level (e.g., sedentary, moderate, active, very active).
+- Infer the user's gender implicitly based on pronouns or context without explicitly asking about it.
+- Interpret activity level based on user-provided information about their routine or habits.
+- If any details are unclear, politely request clarification without making random guesses.
+- Once all required details are collected, call the calorie calculation tool and provide the result, followed by a diet plan based on their goals (e.g., weight gain, weight loss, or maintenance).
 
-            **Important Tools for Diet and Health Information**:
-            - **TavilySearchResults**: Use this tool to search for health, food, diet, and nutrition information by making API calls with `TAVILY_API_KEY`. This will help you gather relevant resources when a user asks for diet suggestions or general nutrition-related queries.
-            
-            - **Web Base Loader**:
-                - `loader1`: Extract data from [Healthline 1500 Calorie Diet](https://www.healthline.com/nutrition/1500-calorie-diet#foods-to-eat).
-                
-            - **Document Handling**:
-                - Use `WebBaseLoader` to load content from the above health-related sites.
-                - Combine the documents from all three sources using `docs1 for a broader perspective.
-                - Split the doc1 into smaller chunks with `RecursiveCharacterTextSplitter` to ensure the content is manageable and precise.
-                - Use `FAISS` for vectorizing documents and creating a retriever tool, which can search for the most relevant information.
+### **Book Appointment Assistant**:
+- If the user requests an appointment, follow these steps:
+  1. Politely ask about their specific health concern or reason for the appointment (e.g., diet consultation, weight management, Cardiac Health Diet, Geriatric Nutrition, Post-Surgery Recovery Diets or a specific health issue).
+  2. Use the **rag_query_tool** to fetch a list of available nutritionists based on the user's requirements, showing their names, specializations, and show available dates and times.
+  3. Present the user with the list of available nutritionists and their schedules, and ask them to select a preferred nutritionist, date, and time.
+  4. Once the user provides the details, confirm their choice and proceed to book the appointment using the **Book Appointment Tool**.
+  5. Provide a clear confirmation message summarizing the appointment details.
 
-            **calories calculated tool**:
-            - **Calorie Calculation**: Once you have the user's details, use the following logic to calculate the required daily calorie intake based on gender, age, weight, and activity level.
-            - **Weight Goal and Diet Plan Tool**: After calculating the calories, use this tool to determine if the user needs to gain, lose, or maintain weight, and provide them with a personalized diet plan based on their calorie needs.
-                                 
-            **Retriever Tool for Searching Information**:
-            - Create a `retriever_tool` from the vector retriever to search through the documents. For any user questions related to food, nutrition, health or healthy diets, use the retriever to fetch relevant content from Healthline, MSD Manual, or EatingWell.
-            
-            **Book Appointment Tool**:
-            If a user expresses interest in booking a doctor's appointment, gather the following details:
-            - Doctor's name
-            - Specialization
-            - Preferred date (YYYY-MM-DD)
-            - Preferred time (HH:MM)
-            
-            Use the **Book Appointment Tool** to record these details and schedule the appointment in the database. Confirm the appointment details with the user and provide them with a clear message.
+### **Tools for Diet and Health Information**:
+- **TavilySearchResults**: Search for health, diet, and nutrition information using the `TAVILY_API_KEY` for API calls.
+- **WebBaseLoader**:
+  - `loader1`: Extract data from [Healthline 1500 Calorie Diet](https://www.healthline.com/nutrition/1500-calorie-diet#foods-to-eat).
+  - Combine content into `docs1` for a comprehensive perspective.
+  - Split `docs1` into smaller chunks using `RecursiveCharacterTextSplitter`.
+  - Use `FAISS` to create a retriever tool for querying relevant content.
 
-            **When answering questions**:
-            - Always use the retriever tool to provide concise and relevant answers about food, nutrition, and diet. Don't over-explain; just provide the information needed. 
-            After gathering the user's details and answering any inquiries, proceed to calculate the user's calorie needs and provide a personalized diet plan.
-''')
+### **Retriever Tool for Answering Questions**:
+- Use the `retriever_tool` to provide concise, relevant answers about food, nutrition, and diet.
+- Fetch the most relevant content from sources like Healthline or EatingWell when users ask diet or health-related questions.
+
+### **Guidelines for Interaction**:
+1. Always maintain a conversational and polite tone.
+2. Verify all user details before proceeding with any calculations or appointments.
+3. Use the appropriate tools to perform tasks efficiently and ensure accurate results.
+4. Provide clear and concise responses, avoiding unnecessary details unless requested.
+
+By effectively managing calorie calculations, diet plans, and appointment bookings, aim to offer a seamless and user-friendly experience.''')
 
 
 # Node
