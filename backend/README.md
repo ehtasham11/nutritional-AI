@@ -3,3 +3,5 @@ curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 npx create-next-app
+
+poetry run python -m uvicorn main:app --port 8001 --reload

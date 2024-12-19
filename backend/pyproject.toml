@@ -16,6 +16,11 @@ langgraph = "^0.2.53"
 python-dotenv = "^1.0.1"
 faiss-cpu = "^1.9.0.post1"
 beautifulsoup4 = "^4.12.3"
+sqlmodel = "^0.0.22"
+bcrypt = "^4.2.1"
+psycopg2-binary = "^2.9.10"
+pydentic = "^0.0.1.dev3"
+pydantic = {extras = ["email"], version = "^2.10.3"}
 
 
 [build-system]
