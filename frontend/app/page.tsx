@@ -1,324 +1,218 @@
-"use client";
+'use client'
+import React, { useState } from "react";
+import { Label } from "./components/ui/label";
+import { Input } from "./components/ui/input";
+import { cn } from "./lib/utils";
+import {
+  IconBrandGithub,
+  IconBrandGoogle,
+  IconBrandOnlyfans,
+} from "@tabler/icons-react";
 
-import { useState } from "react";
-import Typewriter from "typewriter-effect";
+export default function SignupFormDemo() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    First_Name: "",
+    Last_Name: "",
+    email: "",
+    password: "",
+    confirm_password: "",
+  });
 
-// Define the Message type
-interface Message {
-  type: "user" | "bot";
-  text: string;
-}
-
-const ChatPage = () => {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!input.trim()) return;
+    if (!formData.First_Name.trim() || !formData.Last_Name.trim() || !formData.email.trim() || !formData.password.trim() || !formData.confirm_password.trim()) return;
 
-    // Add user input to chat
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { type: "user", text: input },
-    ]);
-
-    setLoading(true);
+    setIsLoading(true);
 
     try {
-      // Make POST request to the FastAPI endpoint
-      const response = await fetch("http://127.0.0.1:8001/generateanswer", {
+      const response = await fetch("http://127.0.0.1:8056/register/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ input_text: input }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
-
-      if (data.response) {
-        // Add bot response to chat
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { type: "bot", text: data.response },
-        ]);
+      if (response.status === 409) {
+          alert("Email is already registered.");
+          window.location.href = "/chatbot";
+      } else if (data.response) {
+          alert("User registered successfully");
+          // Redirect to chatbot page here
+          window.location.href = "/chatbot";  // or use next/router for page routing
       } else {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { type: "bot", text: "No response generated." },
-        ]);
+          alert("Registration failed: " + data.message || "Unknown error");
       }
     } catch (err) {
-      // Handle errors
       console.log("error", err);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { type: "bot", text: "Error: Unable to fetch response." },
-      ]);
+      alert("Error: Unable to register.");
     }
 
-    setInput(""); // Clear input field
-    setLoading(false); // Stop loading
+    setIsLoading(false);
   };
 
   return (
-    <div
-      className="flex flex-col items-center justify-center min-h-screen bg-cover bg-center py-8"
-      style={{ backgroundImage: "url(/newBg.jpg)" }}
-    >
-      <div className="m-4 w-full">
-        <section className="mb-6  text-center">
-          <h1 className="text-3xl font-bold text-white">Nutritionist</h1>
-          <h6 className="text-sm text-white">
-            Your AI Powered nutrition planner assistant
-          </h6>
-        </section>
+    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-pink-800 via-black to-brown-900 py-12">
+      <div className="max-w-md w-full mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-gradient-to-br from-white via-brown-500 to-brown-400 dark:from-gray-900 dark:via-black dark:to-brown-700 text-white">
+        <h2 className="font-bold text-xl text-neutral-100">Welcome to Aceternity</h2>
+        <p className="text-neutral-300 text-sm max-w-sm mt-2">
+          Login to aceternity if you can because we don&apos;t have a login flow yet
+        </p>
 
-        <section className="mb-4 w-auto mx-4 sm:w-4/6 md:w-3/6 sm:m-auto">
-          <div className="bg-white bg-opacity-20 backdrop-blur-md border border-gray-300 rounded-md p-3 h-96 overflow-y-auto flex flex-col">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`my-2 p-2 rounded-lg ${
-                  msg.type === "user"
-                    ? "bg-red-600 bg-opacity-80 backdrop-blur-md text-white self-end"
-                    : "bg-gray-200 text-black self-start"
-                }`}
-              >
-                {msg.type === "user" ? (
-                  msg.text
-                ) : index === messages.length - 1 ? (
-                  <Typewriter
-                    options={{
-                      strings: [msg.text],
-                      autoStart: true,
-                      cursor: "",
-                      delay: 0,
-                      loop: false,
-                      deleteSpeed: Infinity,
-                    }}
-                  />
-                ) : (
-                  msg.text
-                )}
-              </div>
-            ))}
-          </div>
-          <section className="flex flex-col w-full mt-2">
-            <form onSubmit={handleSubmit} className="flex flex-col">
-              <input
+        <form className="my-8" onSubmit={handleSubmit}>
+          <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mb-4">
+            <LabelInputContainer>
+              <Label htmlFor="First_Name">First name</Label>
+              <Input
+                id="First_Name"
+                name="First_Name"
+                value={formData.First_Name}
+                onChange={handleInputChange}
+                placeholder="Tyler"
                 type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="p-2 border border-gray-300 rounded-lg mb-2"
-                placeholder="What is your goal?"
-                required
               />
-              <button
-                type="submit"
-                className={`p-2 rounded-lg flex cursor-pointer items-center justify-center ${
-                  loading ? "bg-gray-500" : "bg-red-600 hover:bg-red-700"
-                } text-white`}
-                disabled={loading}
+            </LabelInputContainer>
+            <LabelInputContainer>
+              <Label htmlFor="Last_Name">Last name</Label>
+              <Input
+                id="Last_Name"
+                name="Last_Name"
+                value={formData.Last_Name}
+                onChange={handleInputChange}
+                placeholder="Durden"
+                type="text"
+              />
+            </LabelInputContainer>
+          </div>
+          <LabelInputContainer className="mb-4">
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              placeholder="projectmayhem@fc.com"
+              type="email"
+            />
+          </LabelInputContainer>
+          <LabelInputContainer className="mb-4">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              placeholder="••••••••"
+              type="password"
+            />
+          </LabelInputContainer>
+          <LabelInputContainer className="mb-8">
+            <Label htmlFor="confirm_password">Confirm Password</Label>
+            <Input
+              id="confirm_password"
+              name="confirm_password"
+              value={formData.confirm_password}
+              onChange={handleInputChange}
+              placeholder="••••••••"
+              type="password"
+            />
+          </LabelInputContainer>
+
+          <button
+            className="bg-gradient-to-br from-purple-700 to-purple-500 block w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset] flex items-center justify-center"
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
               >
-                {loading ? (
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 0016 0H4z"
-                    />
-                  </svg>
-                ) : (
-                  "Submit"
-                )}
-              </button>
-            </form>
-          </section>
-        </section>
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                ></path>
+              </svg>
+            ) : (
+              "Sign up →"
+            )}
+          </button>
+
+          <div className="bg-gradient-to-r from-transparent via-neutral-500 dark:via-neutral-700 to-transparent my-8 h-[1px] w-full" />
+
+          <div className="flex flex-col space-y-4">
+            <button
+              className="relative group/btn flex space-x-2 items-center justify-start px-4 w-full text-white rounded-md h-10 font-medium shadow-input bg-gray-700 dark:bg-zinc-800"
+              type="submit"
+            >
+              <IconBrandGithub className="h-4 w-4 text-neutral-100" />
+              <span className="text-neutral-200 text-sm">GitHub</span>
+              <BottomGradient />
+            </button>
+            <button
+              className="relative group/btn flex space-x-2 items-center justify-start px-4 w-full text-white rounded-md h-10 font-medium shadow-input bg-gray-700 dark:bg-zinc-800"
+              type="submit"
+            >
+              <IconBrandGoogle className="h-4 w-4 text-neutral-100" />
+              <span className="text-neutral-200 text-sm">Google</span>
+              <BottomGradient />
+            </button>
+            <button
+              className="relative group/btn flex space-x-2 items-center justify-start px-4 w-full text-white rounded-md h-10 font-medium shadow-input bg-gray-700 dark:bg-zinc-800"
+              type="submit"
+            >
+              <IconBrandOnlyfans className="h-4 w-4 text-neutral-100" />
+              <span className="text-neutral-200 text-sm">OnlyFans</span>
+              <BottomGradient />
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
+}
+
+const BottomGradient = () => {
+  return (
+    <>
+      <span className="group-hover/btn:opacity-100 block transition duration-500 opacity-0 absolute h-px w-full -bottom-px inset-x-0 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
+      <span className="group-hover/btn:opacity-100 blur-sm block transition duration-500 opacity-0 absolute h-px w-1/2 mx-auto -bottom-px inset-x-10 bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
+    </>
+  );
 };
 
-export default ChatPage;
-
-// 'use client'
-
-// import React, { useState } from 'react'
-// import Image from 'next/image';
-// import img from "./../public/robot.jpg"
-// import img1 from "./../public/human.jpg"
-
-// type ChatMessageType = {
-//   role: string;
-//   content: string;
-// }
-
-// // export async function POST(req: Request): Promise<NextResponse> {
-// //   try {
-// //     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-// //     const model = await genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-// //     return NextResponse.json({
-// //       success: true,
-// //       data: model,
-// //     });
-// //   } catch (error) {
-// //     return NextResponse.json({
-// //       success: false,
-// //       error: error.message,
-// //     });
-// //   }
-// // }
-
-// export default function page() {
-//   const [userInput, setUserInput] = useState<string>('')
-//   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([])
-//   const [isLoading, setIsLoading] = useState<boolean>(false)
-
-//   const handleUserInput = async () => {
-//     if (!userInput) return;
-
-//     setIsLoading(true);
-
-//     // Add the user input to the chat history
-//     setChatHistory((prevChat) => [
-//       ...prevChat,
-//       { role: "user", content: userInput },
-//     ]);
-
-//     try {
-//       const response = await fetch("http://127.0.0.1:8001/generateanswer", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//         body: JSON.stringify({ input_text: userInput }),
-//       });
-
-//       const data = await response.json();
-
-//       if (data.response) {
-//         setChatHistory((prevChat) => [
-//           ...prevChat,
-//           { role: "assistant", content: data.response },
-//         ]);
-//       } else {
-//         setChatHistory((prevChat) => [
-//           ...prevChat,
-//           { role: "assistant", content: "No response generated." },
-//         ]);
-//       }
-//     } catch (error) {
-//       setChatHistory((prevChat) => [
-//         ...prevChat,
-//         { role: "assistant", content: "Error: Unable to fetch response." },
-//       ]);
-//     }
-
-//     setUserInput(""); // Clear the input field
-//     setIsLoading(false); // Stop loading
-//   };
-
-//   return (
-//     <div className='bg-gray-100 min-h-screen flex flex-col justify-center items-center'>
-
-//       <div className='w-full max-w-screen-md bg-white rounded-t-xl rounded-b-2xl shadow-xl shadow-sky-800'>
-//         <div className='flex items-center justify-between mb-4'>
-//           {/* Header */}
-//           <div className='w-full p-3 bg-gradient-to-r from-[#7671db] via-[#918de0] to-[#b9b2fb] rounded-t-xl'>
-//             {/* <div className='text-2xl font-bold px-1 m-2 text-violet-600 mb-4'>AI Chatbot</div> */}
-//             <div>
-//               <div className="flex justify-end space-x-6">
-//                 <div className="w-4 h-4 bg-violet-50 rounded-full"></div>
-//                 <div className="w-4 h-4 bg-violet-50 rounded-full"></div>
-//                 <div className="w-4 h-4 bg-[#7671db] rounded-full"></div>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//         {/* Messages */}
-//         <div className='mb-4' style={{ height: "400px", overflow: 'auto' }}>
-//           {chatHistory.map((message, index) => (
-//             <div
-//               key={index}
-//               className={`flex items-start mb-2 text-sm text-gray-600 ${message.role === 'user' ? 'justify-end' : 'justify-start'
-//                 }`}
-//             >
-//               {/* Image for User or Assistant */}
-//               <div className="flex-shrink-0">
-//                 {message.role === 'user' ? (
-//                   <Image
-//                     src= {img1} // Replace with the actual human image path
-//                     alt="User"
-//                     className="h-8 w-8 rounded-full mx-2"
-//                   />
-//                 ) : (
-//                   <Image
-//                     src={img} // Replace with the actual robot image path
-//                     alt="Assistant"
-//                     className="h-8 w-8 rounded-full mx-2"
-//                   />
-//                 )}
-//               </div>
-
-//               {/* Message Content */}
-//               <div
-//                 className={`inline-block p-2 rounded-md max-w-md ${message.role === 'user'
-//                   ? 'bg-gradient-to-r from-[#7671db] to-[#4f65d2] text-white'
-//                   : 'bg-gradient-to-r from-[#b9c3e8] to-[#697bd2] text-gray-800'
-//                   }`}
-//               >
-//                 {message.content}
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//         {/* Input Area of Chatbot */}
-//         <div className='flex p-4'>
-//           <input
-//             type='text'
-//             value={userInput}
-//             onChange={(e) => setUserInput(e.target.value)}
-//             className='flex-1 w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-l-lg'
-//             placeholder='Ask me anything...'
-//           />
-//           {isLoading ? (
-//             <div className='bg-[#4bb9db] text-white p-2 rounded-sm shadow-l-2xl shadow-[#4bb9db] animate-pulse'>
-//               Loading...
-//             </div>
-//           ) : (
-//             <button
-//               disabled={isLoading}
-//               onClick={handleUserInput}
-//               className={`px-4 py-2 font-sans ${isLoading ? 'opacity-50 cursor-not-allowed' : 'bg-[#1466a9] hover:bg-cyan-500 hover:duration-300 text-white p-2 border-transparent rounded-r-lg'}`}
-//             >
-//               Send
-//             </button>
-//           )}
-
-//         </div>
-//         <div className=' bg-[#99bfda] py-3 rounded-b-2xl shadow-xl shadow-[#a2c0d7]'>
-
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
+const LabelInputContainer = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => {
+  return (
+    <div className={cn("flex flex-col space-y-2 w-full", className)}>
+      {children}
+    </div>
+  );
+};

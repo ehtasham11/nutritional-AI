@@ -18,8 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import  HumanMessage, SystemMessage
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from sqlmodel import SQLModel, Field, create_engine, Session
-from typing import Optional
+from sqlmodel import SQLModel, Field, create_engine, Session, select
+from typing import List, Optional
 import os
 from fastapi import FastAPI, HTTPException
 import uvicorn
@@ -30,7 +30,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_origins=["http://localhost:3001"],  # Frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -116,6 +116,30 @@ def book_appointment(doctor: str, date: str, time: str, specialization: str) -> 
         return f"Appointment booked successfully with Dr. {doctor} (Specialization: {specialization}) on {date} at {time}."
     except Exception as e:
         return f"Failed to book appointment: {str(e)}"
+
+
+# Function to delete a booked appointment
+def delete_appointment(appointment_id: int) -> str:
+    """
+    Deletes an appointment from the database by ID.
+    
+    Args:
+        appointment_id: The ID of the appointment to delete.
+    
+    Returns:
+        Confirmation message on successful deletion or an error message.
+    """
+    try:
+        with Session(engine) as session:
+            appointment = session.get(Appointment, appointment_id)
+            if not appointment:
+                return f"Appointment with ID {appointment_id} not found."
+            
+            session.delete(appointment)
+            session.commit()
+        return f"Appointment with ID {appointment_id} has been successfully deleted."
+    except Exception as e:
+        return f"Failed to delete appointment: {str(e)}"
 
 
 search = TavilySearchResults(tavily_api_key=os.getenv("TAVILY_API_KEY"))
@@ -320,7 +344,7 @@ def calorie_calculator_tool(gender: str, weight: float, height: float, age: int,
     return calculate_daily_calories(gender, weight, height, age, activity_level)
 
 
-tools = [search, retriever_tool, calorie_calculator_tool, book_appointment, rag_query_tool]
+tools = [search, retriever_tool, calorie_calculator_tool, get_appointments, book_appointment, rag_query_tool, delete_appointment]
 
 
 llm_with_tools = llm.bind_tools(tools)
@@ -335,7 +359,25 @@ Your key responsibilities include calculating users' daily calorie intake, provi
 - Infer the user's gender implicitly based on pronouns or context without explicitly asking about it.
 - Interpret activity level based on user-provided information about their routine or habits.
 - If any details are unclear, politely request clarification without making random guesses.
-- Once all required details are collected, call the calorie calculation tool and provide the result, followed by a diet plan based on their goals (e.g., weight gain, weight loss, or maintenance).
+- Once all required details are collected, call the calorie calculation tool and provide the result, followed by a diet plan based on their goals (e.g., weight gain, weight loss, or maintenance). Here’s how a personalized diet plan could look:
+### Personalized Diet Plan for Weight Gain
+
+| **Meal**          | **Food Items**                              | **Portion/Quantity** | **Calories** |
+|--------------------|---------------------------------------------|-----------------------|--------------|
+| **Breakfast**      | Scrambled eggs, whole-grain toast, avocado  | 2 eggs, 2 slices, 1/2 avocado | 400 kcal    |
+| **Mid-Morning Snack** | Greek yogurt with mixed nuts              | 1 cup yogurt, 1 oz nuts       | 300 kcal    |
+| **Lunch**          | Grilled chicken breast, quinoa, steamed veggies | 1 chicken breast, 1 cup quinoa, 1 cup veggies | 600 kcal    |
+| **Afternoon Snack** | Banana with peanut butter                  | 1 banana, 1 tbsp peanut butter | 250 kcal    |
+| **Dinner**         | Baked salmon, sweet potato, asparagus       | 1 fillet salmon, 1 medium sweet potato, 1 cup asparagus | 550 kcal    |
+| **Evening Snack**  | Cottage cheese with honey and berries       | 1/2 cup cottage cheese, 1 tsp honey, 1/4 cup berries | 200 kcal    |
+| **Total Daily Calories** |                                         |                       | **2300 kcal** |
+
+---
+
+### Tips for Success
+- Include **halal** options to align with dietary preferences.
+- Adjust portion sizes based on user goals and calorie needs.
+- Add variety by substituting equivalent foods (e.g., tofu for chicken or oats for toast).
 
 ### **Book Appointment Assistant**:
 - If the user requests an appointment, follow these steps:
@@ -344,6 +386,14 @@ Your key responsibilities include calculating users' daily calorie intake, provi
   3. Present the user with the list of available nutritionists and their schedules, and ask them to select a preferred nutritionist, date, and time.
   4. Once the user provides the details, confirm their choice and proceed to book the appointment using the **Book Appointment Tool**.
   5. Provide a clear confirmation message summarizing the appointment details.
+
+                        
+### **Appointment Deletion**:
+- If the user requests to cancel an appointment, follow these steps:
+  1. Ask for the appointment ID or other identifying details.
+  2. Use the `delete_appointment` tool to cancel the booking.
+  3. Provide a confirmation message once the appointment is successfully deleted.
+  4. If the appointment ID is invalid, notify the user politely and ask for a valid ID.
 
 ### **Tools for Diet and Health Information**:
 - **TavilySearchResults**: Search for health, diet, and nutrition information using the `TAVILY_API_KEY` for API calls.
@@ -365,10 +415,9 @@ Your key responsibilities include calculating users' daily calorie intake, provi
 
 By effectively managing calorie calculations, diet plans, and appointment bookings, aim to offer a seamless and user-friendly experience.''')
 
-
 # Node
 def assistant(state: MessagesState) -> MessagesState:
-    return {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
+    return {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"][-10:])]}
 
 # Build graph
 builder: StateGraph = StateGraph(MessagesState)

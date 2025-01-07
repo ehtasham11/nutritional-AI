@@ -6,8 +6,11 @@ from dotenv import load_dotenv
 from smtplib import SMTP, SMTPException
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import secrets
+
+# Load environment variables
 load_dotenv()
 
 from config.db import create_tables, engine
@@ -15,6 +18,15 @@ from models.signup import User, UserRegistration
 
 # FastAPI application
 app = FastAPI()
+
+# Allow requests from the frontend (Next.js)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Function to hash passwords
 def hash_password(password: str) -> str:
@@ -24,61 +36,42 @@ def hash_password(password: str) -> str:
 
 # Function to validate the password
 def validate_password(password: str) -> bool:
-    # Minimum length requirement
     if len(password) < 8:
         return False
 
-    # Flags to check for required character types
-    has_uppercase = False
-    has_digit = False
-    has_special = False
-
-    # List of special characters
+    has_uppercase = any(char.isupper() for char in password)
+    has_digit = any(char.isdigit() for char in password)
     special_characters = set("!@#$%^&*()-_=+[]{}|;:'\",.<>?/`~")
+    has_special = any(char in special_characters for char in password)
 
-    for char in password:
-        if char.isupper():
-            has_uppercase = True
-        elif char.isdigit():
-            has_digit = True
-        elif char in special_characters:
-            has_special = True
-
-        # If all conditions are met, no need to continue checking
-        if has_uppercase and has_digit and has_special:
-            return True
-
-    return False
+    return has_uppercase and has_digit and has_special
 
 # Function to send a confirmation email
-def send_confirmation_email(email: str, First_name: str, token: str):
+def send_confirmation_email(email: str, first_name: str, token: str):
     try:
         smtp_server = os.getenv("SMTP_SERVER")
         smtp_port = int(os.getenv("SMTP_PORT"))
         smtp_user = os.getenv("SMTP_USER")
         smtp_password = os.getenv("SMTP_PASSWORD")
 
-        # Create email content
         subject = "Email Confirmation for Your Registration"
         body = f"""
-        Hi {First_name},
+        Hi {first_name},
         
         Thank you for registering on our platform. Please click the link below to confirm your email address:
         
-        http://127.0.0.1:8070/confirm-email/{token}
+        http://127.0.0.1:8055/confirm-email/{token}
         
         Best regards,
         The Team
         """
 
-        # Create email message
         msg = MIMEMultipart()
         msg["From"] = smtp_user
         msg["To"] = email
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
 
-        # Send the email
         with SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
@@ -99,34 +92,27 @@ def is_email_registered(email: str, session: Session) -> bool:
 @app.post("/register/")
 async def register_user(user: UserRegistration, background_tasks: BackgroundTasks):
     with Session(engine) as session:
-        # Check if the email is already registered
         if is_email_registered(user.email, session):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email is already registered"
             )
 
-        # Validate password strength
         if not validate_password(user.password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Password must be at least 8 characters long, include an uppercase letter, a number, and a special character."
             )
 
-        # Check if password and confirm_password match
         if user.password != user.confirm_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Passwords do not match"
             )
 
-        # Hash the password
         hashed_password = hash_password(user.password)
-
-        # Generate confirmation token
         confirmation_token = secrets.token_urlsafe(32)
 
-        # Create a new user record (set active=False until email confirmation)
         db_user = User(
             First_Name=user.First_Name,
             Last_Name=user.Last_Name,
@@ -139,15 +125,13 @@ async def register_user(user: UserRegistration, background_tasks: BackgroundTask
         session.commit()
         session.refresh(db_user)
 
-        # Send confirmation email in the background
-        background_tasks.add_task(send_confirmation_email, user.email, user.First_Name, user.Last_Name, confirmation_token)
+        background_tasks.add_task(send_confirmation_email, user.email, user.First_Name, confirmation_token)
 
     return {"message": "Registration successful! Please check your email to confirm your registration."}
 
 @app.get("/confirm-email/{token}")
 async def confirm_email(token: str):
     with Session(engine) as session:
-        # Find the user by confirmation token
         statement = select(User).where(User.confirmation_token == token)
         user = session.exec(statement).first()
 
@@ -157,7 +141,6 @@ async def confirm_email(token: str):
                 detail="Invalid or expired confirmation token"
             )
 
-        # Activate the user and clear the confirmation token
         user.is_active = True
         user.confirmation_token = None
         session.add(user)
@@ -168,5 +151,7 @@ async def confirm_email(token: str):
 # Start the FastAPI app
 def start():
     create_tables()
-    uvicorn.run("logout.main:app", host="127.0.0.1", port=8070)
+    uvicorn.run("main:app", host="127.0.0.1", port=8055)
 
+if __name__ == "__main__":
+    start()
